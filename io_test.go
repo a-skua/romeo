@@ -76,3 +76,9 @@ func TestRequestImpl(t *testing.T) {
 		}
 	}
 }
+
+func TestNewRequestReader(t *testing.T) {
+	if r := NewRequestReader(); r == nil {
+		t.Fatal("this is not nil")
+	}
+}

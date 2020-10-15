@@ -34,6 +34,11 @@ func (request) Read(r *http.Request, v interface{}) error {
 	return json.Unmarshal(b, v)
 }
 
+// NewRequestReader return A RequestReader
+func NewRequestReader() RequestReader {
+	return &request{}
+}
+
 // ResponseWriter is the interface
 // that wraps Write method to write Response
 type ResponseWriter interface {
