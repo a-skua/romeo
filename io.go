@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/a-skua/romeo/container"
+	"github.com/a-skua/romeo/result"
 )
 
 // A RequestReader is the interface
@@ -42,5 +42,5 @@ func NewRequestReader() RequestReader {
 // ResponseWriter is the interface
 // that wraps Write method to write Response
 type ResponseWriter interface {
-	Write(http.ResponseWriter, container.Result)
+	Write(http.ResponseWriter, result.Result)
 }
