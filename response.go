@@ -16,11 +16,20 @@ type ResponseWriter interface {
 	Write(http.ResponseWriter, result.Result)
 }
 
+// SetResponseHeaderFunc is setting header func
+type SetResponseHeaderFunc func(http.Header)
+
+// DefaultSetHeader is implements SetResponseHeaderFunc
+func DefaultSetHeader(h http.Header) {
+	h.Set("Content-Type", "application/json")
+}
+
 // a response is implements the ResponseWriter
 type response struct {
 	status2http status.Status2HTTPConverter
 	log         *log.Logger
 	wrapper     ResponseValueWrapper
+	setHeader   SetResponseHeaderFunc
 }
 
 // A Write is written to response body
@@ -42,8 +51,7 @@ func (r *response) Write(w http.ResponseWriter, res result.Result) {
 		return
 	}
 
-	// TODO: outsourcing
-	w.Header().Set("Content-Type", "application/json")
+	r.setHeader(w.Header())
 
 	// write http status
 	h, ok := res.Status().(status.HttpStatus)
@@ -58,9 +66,10 @@ func (r *response) Write(w http.ResponseWriter, res result.Result) {
 
 // ResponseWriterConfigs is argument by NewResponseWriter
 type ResponseWriterConfigs struct {
-	logger     *log.Logger
-	statusConv status.Status2HTTPConverter
-	wrapper    ResponseValueWrapper
+	Logger        *log.Logger
+	StatusConv    status.Status2HTTPConverter
+	Wrapper       ResponseValueWrapper
+	SetHeaderFunc SetResponseHeaderFunc
 }
 
 // NewResponseWriter return A ResponseWriter
@@ -69,18 +78,22 @@ func NewResponseWriter(conf *ResponseWriterConfigs) ResponseWriter {
 		conf = &ResponseWriterConfigs{}
 	}
 
-	if conf.logger == nil {
-		conf.logger = log.New(os.Stderr, "", log.LstdFlags|log.LUTC|log.Lmicroseconds)
+	if conf.Logger == nil {
+		conf.Logger = log.New(os.Stderr, "", log.LstdFlags|log.LUTC|log.Lmicroseconds)
 	}
-	if conf.statusConv == nil {
+	if conf.StatusConv == nil {
 		// TODO: anything
 	}
-	if conf.wrapper == nil {
-		conf.wrapper = NoWrap
+	if conf.Wrapper == nil {
+		conf.Wrapper = NoWrap
+	}
+	if conf.SetHeaderFunc == nil {
+		conf.SetHeaderFunc = DefaultSetHeader
 	}
 	return &response{
-		status2http: conf.statusConv,
-		log:         conf.logger,
-		wrapper:     conf.wrapper,
+		status2http: conf.StatusConv,
+		log:         conf.Logger,
+		wrapper:     conf.Wrapper,
+		setHeader:   conf.SetHeaderFunc,
 	}
 }
