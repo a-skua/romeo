@@ -1,5 +1,7 @@
 package status
 
+type Status2HTTPConverter func(s Status) int
+
 // A Status is the interface
 type Status interface {
 	Int() int
