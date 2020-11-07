@@ -84,7 +84,7 @@ func TestRequestImpl(t *testing.T) {
 }
 
 func TestNewRequestReader(t *testing.T) {
-	if r := NewRequestReader(); r == nil {
+	if r := NewRequestReader(&RequestReaderConfigs{}); r == nil {
 		t.Fatal("this is not nil")
 	}
 }
@@ -158,7 +158,7 @@ func TestResponseWrite(t *testing.T) {
 }
 
 func TestNewResponseWriter(t *testing.T) {
-	if r := NewResponseWriter(nil, nil, nil); r == nil {
+	if r := NewResponseWriter(&ResponseWriterConfigs{nil, nil, nil}); r == nil {
 		t.Fatal("this is not nil")
 	}
 }
