@@ -2,11 +2,17 @@ package romeo
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/a-skua/romeo/result"
+	"github.com/a-skua/romeo/status"
+	"github.com/a-skua/romeo/status/httpstatus"
 )
 
 func TestRequestImpl(t *testing.T) {
@@ -63,15 +69,15 @@ func TestRequestImpl(t *testing.T) {
 		(err != nil && d.err != nil && err.Error() != d.err.Error()) ||
 			// !(err == d.err == nil)
 			(err != nil && d.err == nil) || (err == nil && d.err != nil) {
-			t.Fatal(fmt.Sprintf("%02d: have (%v), want (%v)", i, err, d.err))
+			t.Fatalf("%02d: have (%v), want (%v)", i, err, d.err)
 		}
 
 		// read has not error
 		if d.err == nil {
 			if have, want := val.ID, "foo"; have != want {
-				t.Fatal(fmt.Sprintf("%02d: have (%v), want (%v)", i, have, want))
+				t.Fatalf("%02d: have (%v), want (%v)", i, have, want)
 			} else if have, want := val.Name, "bar"; have != want {
-				t.Fatal(fmt.Sprintf("%02d: have (%v), want (%v)", i, have, want))
+				t.Fatalf("%02d: have (%v), want (%v)", i, have, want)
 			}
 		}
 	}
@@ -79,6 +85,80 @@ func TestRequestImpl(t *testing.T) {
 
 func TestNewRequestReader(t *testing.T) {
 	if r := NewRequestReader(); r == nil {
+		t.Fatal("this is not nil")
+	}
+}
+
+func TestResponseWrite(t *testing.T) {
+	w := httptest.NewRecorder()
+	res := &response{
+		log: log.New(os.Stdout, "", 0),
+		status2http: func(s status.Status) int {
+			return 200
+		},
+		wrapper: DefaultWrap,
+	}
+
+	// status ok
+	res.Write(w, result.New(httpstatus.OK(), struct {
+		User string `json:"user"`
+	}{"romeo"}, nil))
+	r := w.Result()
+	if body, err := ioutil.ReadAll(r.Body); err != nil {
+		t.Fatal(err)
+	} else {
+		if h, w := r.StatusCode, 200; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := string(body), `{"data":{"user":"romeo"}}`; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := r.Header.Get("Content-Type"), "application/json"; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+	}
+
+	// status internal
+	w = httptest.NewRecorder()
+	res.Write(w, result.New(httpstatus.InternalError(), nil, errors.New("test error")))
+	// Output: test error
+	r = w.Result()
+	if body, err := ioutil.ReadAll(r.Body); err != nil {
+		t.Fatal(err)
+	} else {
+		if h, w := r.StatusCode, 500; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := string(body), `{"data":null}`; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := r.Header.Get("Content-Type"), "application/json"; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+	}
+
+	// error
+	w = httptest.NewRecorder()
+	res = nil
+	res.Write(w, result.New(httpstatus.OK(), nil, nil))
+	r = w.Result()
+	if body, err := ioutil.ReadAll(r.Body); err != nil {
+		t.Fatal(err)
+	} else {
+		if h, w := r.StatusCode, 500; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := string(body), "Internal Server Error\n"; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+		if h, w := r.Header.Get("Content-Type"), "text/plain; charset=utf-8"; h != w {
+			t.Errorf("have (%#v), want (%#v)", h, w)
+		}
+	}
+}
+
+func TestNewResponseWriter(t *testing.T) {
+	if r := NewResponseWriter(nil, nil, nil); r == nil {
 		t.Fatal("this is not nil")
 	}
 }
