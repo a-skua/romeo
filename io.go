@@ -37,8 +37,11 @@ func (request) Read(r *http.Request, v interface{}) error {
 	return json.Unmarshal(b, v)
 }
 
+// RequestReaderConfigs is argument by NewRequestReader
+type RequestReaderConfigs struct{}
+
 // NewRequestReader return A RequestReader
-func NewRequestReader() RequestReader {
+func NewRequestReader(conf *RequestReaderConfigs) RequestReader {
 	return &request{}
 }
 
@@ -88,24 +91,31 @@ func (r *response) Write(w http.ResponseWriter, res result.Result) {
 	w.Write(body)
 }
 
+// ResponseWriterConfigs is argument by NewResponseWriter
+type ResponseWriterConfigs struct {
+	logger     *log.Logger
+	statusConv status.Status2HTTPConverter
+	wrapper    ResponseValueWrapper
+}
+
 // NewResponseWriter return A ResponseWriter
-func NewResponseWriter(
-	logger *log.Logger,
-	statusConv status.Status2HTTPConverter,
-	wrapper ResponseValueWrapper,
-) ResponseWriter {
-	if logger == nil {
-		logger = log.New(os.Stderr, "", log.LstdFlags|log.LUTC|log.Lmicroseconds)
+func NewResponseWriter(conf *ResponseWriterConfigs) ResponseWriter {
+	if conf == nil {
+		conf = &ResponseWriterConfigs{}
 	}
-	if statusConv == nil {
+
+	if conf.logger == nil {
+		conf.logger = log.New(os.Stderr, "", log.LstdFlags|log.LUTC|log.Lmicroseconds)
+	}
+	if conf.statusConv == nil {
 		// TODO: anything
 	}
-	if wrapper == nil {
-		wrapper = NoWrap
+	if conf.wrapper == nil {
+		conf.wrapper = NoWrap
 	}
 	return &response{
-		status2http: statusConv,
-		log:         logger,
-		wrapper:     wrapper,
+		status2http: conf.statusConv,
+		log:         conf.logger,
+		wrapper:     conf.wrapper,
 	}
 }
